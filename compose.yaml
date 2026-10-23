@@ -1,0 +1,35 @@
+# AWS local para desenvolvimento e testes (ADR-012: só produção existe na AWS).
+# Tudo que o Terraform criar aqui vive dentro do container e some com `make down`.
+services:
+  ministack:
+    # Versão fixa: nada de :latest (vale também para providers e imagens da plataforma).
+    image: ministackorg/ministack:1.5.20
+    container_name: ministack
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      # RDS e ECS sobem containers reais (Postgres 16, imagens das tasks).
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Terraform em container, para quem não instalou o CLI. Compartilha a rede do
+  # MiniStack, então localhost:4566 funciona igual a rodar na máquina.
+  terraform:
+    image: hashicorp/terraform:1.13.5
+    profiles: ["tools"]
+    network_mode: "service:ministack"
+    working_dir: /work
+    environment: &aws-local
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost:4566
+    volumes:
+      - .:/work
+
+  # AWS CLI apontada para o MiniStack: make aws CMD="ecs list-clusters"
+  aws:
+    image: amazon/aws-cli:2.22.0
+    profiles: ["tools"]
+    network_mode: "service:ministack"
+    environment: *aws-local

@@ -7,3 +7,7 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 .env
+# Lock file só é versionado nos roots (environments/, global/, bootstrap/).
+modules/**/.terraform.lock.hcl
+tests/**/.terraform.lock.hcl
+crash.log
