@@ -1,0 +1,115 @@
+name: DevOps Infrastructure CI Pipeline
+
+# Terraform (VPC, RDS, App Runner) + [QA-005] análise de IaC e secrets. Política: POL-INFRA-001 (ci-cd.md).
+# Se o Terraform não estiver na raiz, altere TF_DIR (ex.: devops/terraform).
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '.terraform.lock.hcl'
+      - '.github/scripts/check-infra-structure.sh'
+      - '.github/workflows/ci-infra.yml'
+  pull_request:
+    branches: [ main, develop, feature/* ]
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '.terraform.lock.hcl'
+      - '.github/scripts/check-infra-structure.sh'
+      - '.github/workflows/ci-infra.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_DIR: .
+
+jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Init and Validate
+        run: |
+          terraform init -backend=false
+          terraform validate
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          # Valor sintético só para o validate; a senha real nunca entra no CI.
+          TF_VAR_db_password: ci-validate-only
+
+  terraform-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # Garante main.tf, módulos vpc/rds/app_runner, outputs (vpc_id, rds_endpoint, app_runner_service_url)
+      # e variáveis (aws_region, environment, db_password sensível e sem default).
+      - name: Check Terraform module structure
+        run: .github/scripts/check-infra-structure.sh
+
+  iac-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Checkov
+        run: pip install "checkov>=3,<4"
+
+      # Cada falha lista check ID, recurso, arquivo:linha e guia de correção. Exceções ficam em .checkov.yaml (com justificativa).
+      - name: Checkov (Terraform)
+        run: |
+          checkov -d "$TF_DIR" --framework terraform --compact \
+            --output cli --output json --output-file-path console,checkov.json
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          {
+            echo "### Checkov (IaC)"
+            echo ""
+            echo "| Check | Recurso | Arquivo:linha | Motivo | Correção |"
+            echo "|---|---|---|---|---|"
+            jq -r '(if type=="array" then .[] else . end) | .results.failed_checks[]? | "| \(.check_id) | \(.resource) | \(.file_path):\(.file_line_range[0]) | \(.check_name) | \(.guideline // "ver check") |"' checkov.json/results_json.json 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      # Binário oficial do gitleaks (sem a action, que exige licença em organizações). Valor do segredo é ocultado (--redact).
+      - name: Gitleaks
+        run: |
+          GL_VERSION=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" -o gitleaks.tgz
+          tar -xzf gitleaks.tgz gitleaks
+          ./gitleaks detect --source . --redact --verbose --exit-code 1
