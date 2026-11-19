@@ -1,11 +1,11 @@
-# INF-006.1: descomente quando modules/registry estiver implementado.
+# INF-006.1: registry de imagens (ECR).
 
-# module "registry" {
-#   source = "../../modules/registry"
-#
-#   environment = local.environment
-# }
-#
-# output "repository_urls" {
-#   value = module.registry.repository_urls
-# }
+module "registry" {
+  source = "../../modules/registry"
+
+  environment = local.environment
+}
+
+output "repository_urls" {
+  value = module.registry.repository_urls
+}
