@@ -17,10 +17,20 @@ variable "noncurrent_version_expiration_days" {
   description = "Dias até apagar versões antigas dos objetos."
   type        = number
   default     = 30
+
+  validation {
+    condition     = var.noncurrent_version_expiration_days >= 1
+    error_message = "noncurrent_version_expiration_days deve ser pelo menos 1 dia."
+  }
 }
 
 variable "cors_allowed_origins" {
   description = "Origens que podem fazer upload direto com URL pré-assinada (domínio do frontend)."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = !contains(var.cors_allowed_origins, "*")
+    error_message = "Curinga (*) não é permitido em cors_allowed_origins: informe os domínios exatos do frontend."
+  }
 }
