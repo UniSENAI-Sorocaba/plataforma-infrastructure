@@ -1,0 +1,21 @@
+name: CI Infrastructure
+
+on:
+  push:
+    branches: ["main", "f1/**", "feat/**", "fix/**", "chore/**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Terraform format and validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate
+        run: make check
