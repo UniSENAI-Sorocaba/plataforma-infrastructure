@@ -1,11 +1,43 @@
-# Módulo secrets | Card: INF-008.1 (pai: INF-008)
-#
-# Criar:
-#   - aws_kms_key.this com rotação anual ligada + aws_kms_alias "alias/plataforma-<ambiente>".
-#   - Key policy: administração pela conta; uso (Encrypt/Decrypt/GenerateDataKey) pelos serviços
-#     que precisam (RDS, S3, Secrets Manager, CloudWatch Logs). Sem "kms:*" para Principal "*".
-#   - Um aws_secretsmanager_secret por item de secret_names, cifrado com a chave acima.
-#
-# Este módulo cria só o "cofre". O VALOR de cada segredo nunca entra no código nem no state:
-# em production ele é gravado fora do Terraform (CLI/console) ou com secret_string_wo
-# (write-only, Terraform >= 1.11). Nenhum output pode expor valor de segredo.
+data "aws_caller_identity" "current" {}
+
+resource "aws_kms_key" "this" {
+  description             = "Chave da Plataforma Digital - ${var.environment}"
+  deletion_window_in_days = var.kms_deletion_window_in_days
+  enable_key_rotation     = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AccountAdministration"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      },
+      {
+        Sid    = "ServiceDataPlaneUse"
+        Effect = "Allow"
+        Principal = { Service = [
+          "s3.amazonaws.com",
+          "secretsmanager.amazonaws.com",
+          "logs.amazonaws.com"
+        ] }
+        Action   = ["kms:Decrypt", "kms:DescribeKey", "kms:Encrypt", "kms:GenerateDataKey"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "this" {
+  name          = "alias/plataforma-${var.environment}"
+  target_key_id = aws_kms_key.this.key_id
+}
+
+resource "aws_secretsmanager_secret" "this" {
+  for_each                = var.secret_names
+  name                    = "plataforma/${var.environment}/${each.value}"
+  description             = "Segredo da Plataforma Digital (${each.value})"
+  kms_key_id              = aws_kms_key.this.arn
+  recovery_window_in_days = var.recovery_window_in_days
+}

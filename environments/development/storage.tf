@@ -1,8 +1,11 @@
-# INF-010.1: descomente quando modules/storage estiver implementado (depende de secrets).
+module "storage" {
+  source = "../../modules/storage"
 
-# module "storage" {
-#   source = "../../modules/storage"
-#
-#   environment = local.environment
-#   kms_key_arn = module.secrets.kms_key_arn
-# }
+  environment          = local.environment
+  kms_key_arn          = module.secrets.kms_key_arn
+  cors_allowed_origins = ["http://localhost:3000"]
+}
+
+output "storage_bucket_name" {
+  value = module.storage.bucket_name
+}
