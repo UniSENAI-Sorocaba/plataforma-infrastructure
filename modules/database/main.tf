@@ -1,7 +1,8 @@
 resource "aws_db_subnet_group" "this" {
-  name       = "plataforma-${var.environment}"
-  subnet_ids = var.subnet_ids
-  tags       = { Name = "plataforma-${var.environment}" }
+  name        = "plataforma-db-${var.environment}"
+  description = "Private database subnet group for ${var.environment}"
+  subnet_ids  = var.subnet_ids
+  tags        = { Name = "plataforma-db-${var.environment}" }
 }
 
 resource "aws_db_parameter_group" "this" {
