@@ -21,8 +21,17 @@ resource "aws_secretsmanager_secret" "master" {
   count                   = var.manage_master_user_password ? 0 : 1
   name                    = "plataforma/${var.environment}/database-master"
   description             = "Credencial do banco da Plataforma Digital"
-  kms_key_id              = var.kms_key_arn
   recovery_window_in_days = var.environment == "development" ? 0 : 30
+}
+
+resource "aws_secretsmanager_secret_version" "master" {
+  count     = var.manage_master_user_password ? 0 : 1
+  secret_id = aws_secretsmanager_secret.master[0].id
+  secret_string_wo = jsonencode({
+    username = "plataforma_admin"
+    password = ephemeral.random_password.this[0].result
+  })
+  secret_string_wo_version = 1
 }
 
 ephemeral "random_password" "this" {
