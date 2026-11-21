@@ -28,15 +28,14 @@ run "cria_alb_http" {
     security_group_id = run.rede.alb_security_group_id
   }
 
-  # TODO(INF-007.2): asserts. Exemplos:
-  # assert {
-  #   condition     = aws_lb.this.drop_invalid_header_fields
-  #   error_message = "ALB deve descartar cabeçalhos inválidos."
-  # }
-  # assert {
-  #   condition     = output.listener_arn != null
-  #   error_message = "Listener principal não exposto."
-  # }
+  assert {
+    condition     = aws_lb.this.drop_invalid_header_fields
+    error_message = "ALB deve descartar cabeçalhos inválidos."
+  }
+  assert {
+    condition     = output.listener_arn != null
+    error_message = "Listener principal não exposto."
+  }
 }
 
 run "producao_exige_https" {

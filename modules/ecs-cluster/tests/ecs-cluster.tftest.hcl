@@ -15,9 +15,12 @@ variables {
 }
 
 run "cria_cluster" {
-  # TODO(INF-007.1): asserts. Exemplo:
-  # assert {
-  #   condition     = output.cluster_name == "plataforma-development"
-  #   error_message = "Nome fora do padrão."
-  # }
+  assert {
+    condition     = output.cluster_name == "plataforma-development"
+    error_message = "Nome fora do padrão."
+  }
+  assert {
+    condition     = output.cluster_arn != null
+    error_message = "ARN do cluster não foi exposto."
+  }
 }
