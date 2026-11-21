@@ -2,20 +2,20 @@
 
 output "alb_arn" {
   description = "ARN do ALB."
-  value       = null # TODO(INF-007.2)
+  value       = aws_lb.this.arn
 }
 
 output "alb_arn_suffix" {
   description = "Sufixo do ARN (dimensão LoadBalancer das métricas do CloudWatch)."
-  value       = null # TODO(INF-007.2)
+  value       = aws_lb.this.arn_suffix
 }
 
 output "alb_dns_name" {
   description = "DNS do ALB (origem do CloudFront)."
-  value       = null # TODO(INF-007.2)
+  value       = aws_lb.this.dns_name
 }
 
 output "listener_arn" {
   description = "Listener principal onde os serviços penduram suas regras: HTTPS se houver certificado, senão HTTP."
-  value       = null # TODO(INF-007.2)
+  value       = var.certificate_arn == null ? aws_lb_listener.http[0].arn : aws_lb_listener.https[0].arn
 }
