@@ -3,20 +3,20 @@
 
 output "endpoint" {
   description = "Host do banco (sem a porta)."
-  value       = null # TODO(INF-005.1)
+  value       = var.manage_master_user_password ? aws_db_instance.managed[0].address : aws_db_instance.local[0].address
 }
 
 output "port" {
   description = "Porta do banco."
-  value       = null # TODO(INF-005.1)
+  value       = var.manage_master_user_password ? aws_db_instance.managed[0].port : aws_db_instance.local[0].port
 }
 
 output "instance_identifier" {
   description = "Identificador da instância (dimensão dos alarmes do INF-013)."
-  value       = null # TODO(INF-005.1)
+  value       = var.manage_master_user_password ? aws_db_instance.managed[0].identifier : aws_db_instance.local[0].identifier
 }
 
 output "master_secret_arn" {
   description = "ARN do segredo com a senha do admin (gerenciado pela AWS ou criado pelo módulo)."
-  value       = null # TODO(INF-005.1)
+  value       = var.manage_master_user_password ? try(aws_db_instance.managed[0].master_user_secret[0].secret_arn, null) : aws_secretsmanager_secret.master[0].arn
 }

@@ -48,15 +48,22 @@ run "cria_servico" {
     security_group_id = run.rede.app_security_group_id
   }
 
-  # TODO(INF-007.3): asserts. Exemplos:
-  # assert {
-  #   condition     = aws_ecs_service.this.enable_execute_command == false
-  #   error_message = "ECS Exec deve ficar desligado."
-  # }
-  # assert {
-  #   condition     = jsondecode(aws_ecs_task_definition.this.container_definitions)[0].readonlyRootFilesystem
-  #   error_message = "Container deve ter sistema de arquivos somente leitura."
-  # }
+  assert {
+    condition     = aws_ecs_service.this.enable_execute_command == false
+    error_message = "ECS Exec deve ficar desligado."
+  }
+  assert {
+    condition     = jsondecode(aws_ecs_task_definition.this.container_definitions)[0].readonlyRootFilesystem
+    error_message = "Container deve ter sistema de arquivos somente leitura."
+  }
+  assert {
+    condition     = jsondecode(aws_ecs_task_definition.this.container_definitions)[0].user != "0"
+    error_message = "Container não pode executar como root."
+  }
+  assert {
+    condition     = output.target_group_arn != null && output.execution_role_arn != null
+    error_message = "Contratos do serviço não foram expostos."
+  }
 }
 
 run "exige_digest" {
