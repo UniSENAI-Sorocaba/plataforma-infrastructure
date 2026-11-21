@@ -11,6 +11,14 @@ services:
       # RDS e ECS sobem containers reais (Postgres 16, imagens das tasks).
       - /var/run/docker.sock:/var/run/docker.sock
 
+  # SMTP local para E2E de primeiro acesso/recuperação sem credencial real.
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    container_name: mailpit
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
   # Terraform em container, para quem não instalou o CLI. Compartilha a rede do
   # MiniStack, então localhost:4566 funciona igual a rodar na máquina.
   terraform:
