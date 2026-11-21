@@ -37,15 +37,18 @@ run "cria_banco" {
     kms_key_arn       = run.kms.kms_key_arn
   }
 
-  # TODO(INF-005.1): asserts. Exemplos:
-  # assert {
-  #   condition     = aws_db_instance.this.publicly_accessible == false
-  #   error_message = "Banco não pode ser público."
-  # }
-  # assert {
-  #   condition     = aws_db_instance.this.storage_encrypted
-  #   error_message = "Armazenamento deve ser cifrado."
-  # }
+  assert {
+    condition     = aws_db_instance.local[0].publicly_accessible == false
+    error_message = "Banco não pode ser público."
+  }
+  assert {
+    condition     = aws_db_instance.local[0].storage_encrypted
+    error_message = "Armazenamento deve ser cifrado."
+  }
+  assert {
+    condition     = output.master_secret_arn != null
+    error_message = "Segredo do banco deve ser exposto apenas por ARN."
+  }
 }
 
 run "recusa_postgres_15" {
