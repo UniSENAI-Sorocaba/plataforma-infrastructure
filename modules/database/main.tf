@@ -25,6 +25,17 @@ resource "aws_secretsmanager_secret" "master" {
   recovery_window_in_days = var.environment == "development" ? 0 : 30
 }
 
+ephemeral "random_password" "this" {
+  count            = var.manage_master_user_password ? 0 : 1
+  length           = 32
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
+  min_upper        = 1
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "aws_db_instance" "managed" {
   count                       = var.manage_master_user_password ? 1 : 0
   identifier                  = "plataforma-${var.environment}"
@@ -68,7 +79,7 @@ resource "aws_db_instance" "local" {
   kms_key_id                 = var.kms_key_arn
   db_name                    = "plataforma"
   username                   = "plataforma_admin"
-  password_wo                = "local-development-only"
+  password_wo                = ephemeral.random_password.this[0].result
   password_wo_version        = 1
   port                       = 5432
   db_subnet_group_name       = aws_db_subnet_group.this.name
