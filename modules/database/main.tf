@@ -6,8 +6,9 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_db_parameter_group" "this" {
-  name   = "plataforma-${var.environment}-postgres16"
-  family = "postgres16"
+  name        = "plataforma-db-postgres16-${var.environment}"
+  description = "PostgreSQL 16 parameter group for ${var.environment}"
+  family      = "postgres16"
 
   parameter {
     name  = "rds.force_ssl"
