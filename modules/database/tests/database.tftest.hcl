@@ -73,6 +73,17 @@ run "cria_banco" {
     error_message = "Parameter group deve definir rds.force_ssl como 1 exatamente uma vez."
   }
   assert {
+    condition     = toset(aws_db_subnet_group.this.subnet_ids) == toset(run.rede.private_subnet_ids)
+    error_message = "DB subnet group deve conter exatamente as subnets privadas."
+  }
+  assert {
+    condition = length([
+      for subnet_id in aws_db_subnet_group.this.subnet_ids : subnet_id
+      if contains(run.rede.public_subnet_ids, subnet_id)
+    ]) == 0
+    error_message = "DB subnet group não pode conter subnets públicas."
+  }
+  assert {
     condition     = output.master_secret_arn != null
     error_message = "Segredo do banco deve ser exposto apenas por ARN."
   }
