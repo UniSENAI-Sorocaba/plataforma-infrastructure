@@ -688,9 +688,10 @@ Pré-requisitos de cada teste: MiniStack no ar; nenhum ambiente development apli
 
 ## 18. Pendências que dependem de humano (abertas por padrão)
 
-- [ ] Número do card INF-004.1 para o `Closes #` e `repo_id`/nome dos repositórios infra, backend, frontend (e release, quando existir).
-- [ ] Nome/ARN do bucket de state e dos repositórios ECR (D5, D8, INF-006).
-- [ ] Confirmar D1 (release opcional), D2 (nomes `gha-*`), D4 (alvo make para `global/`), D6 (boundary no módulo?), D7 (lista de serviços e tratamento de serviços globais), D9 (permissões do deploy), D13 (curinga por serviço).
+- [ ] Número do card INF-004.1 para o `Closes #`.
+- [ ] Fornecer nomes e IDs reais dos quatro repositórios, ARNs dos dois ECRs e bucket/chave do state como variáveis ao aplicar o root; os valores de fixture não são reais.
+- [ ] Definir a policy de `gha-infra-apply` e a permissions boundary antes de conceder permissões ou aplicar na AWS real.
+- [x] `gha-release-deploy` fica sem policy de serviço nesta fase, conforme orientação; definir escopo em INF-009/INF-019.
 - [ ] Acesso ao laboratório e ao `07-oidc-github-actions-aws.md` (D10, D12), caso não estejam no repo.
 - [ ] Login do `gh` para abrir o PR.
 
@@ -709,6 +710,9 @@ Pré-requisitos de cada teste: MiniStack no ar; nenhum ambiente development apli
 | 2026-11-22 | Estado Git | Árvore com `M .gitignore` e `?? EXECUCAO.md`. Não foram feitos cambios no `.gitignore`. | A02 | Separar alterações de usuário; o commit A06 conterá somente `EXECUCAO.md`. |
 | 2026-11-22 | Pendência humana | IDs dos repositórios, nome/ARN do bucket de state, ARNs dos ECRs e número GitHub do card não estão no repositório. | D5/D8 | Não inventar; aguardar fornecimento e integração dos módulos que exportam os ARNs. |
 | 2026-11-22 | Pendência humana | Convenção de commit não está formalizada por `commitlint`/`CONTRIBUTING`; o modelo de PR existe. | A02/D11 | Usar Conventional Commits até haver configuração contrária. |
+| 2026-11-22 | Decisão | Após a confirmação do solicitante, criar o contrato Terraform novo com nomes/IDs dos repositórios, ARNs dos ECRs e state como entradas obrigatórias; usar apenas fixtures para testes. | Continuação INF-004.1 | Cinco roles e root global implementados; nenhum valor real foi presumido. |
+| 2026-11-22 | Decisão/pendência | Solicitante pediu policies, confirmou state como input obrigatório e `gha-release-deploy` sem policy até INF-009/INF-019; o escopo de `gha-infra-apply` não foi fornecido. | Confirmação do solicitante | Implementadas policies read-only/state-lock e publish por ECR; `infra-apply` sem policy até definir escopo. Nenhuma permissions boundary foi inventada; precisa ser definida antes do uso real. |
+| 2026-11-22 | Resolução | O bloqueio inicial por ausência do contrato foi resolvido pela autorização explícita para criar as roles e seu contrato de entradas nesta etapa. | Continuação INF-004.1 | `modules/github-oidc` e o root `global/github-oidc` agora existem; IDs reais seguem inputs obrigatórios. |
 
 *(Inclua aqui também o inventário de A01–A05.)*
 
