@@ -32,9 +32,10 @@ variables {
 
 run "cria_banco" {
   variables {
-    subnet_ids        = run.rede.private_subnet_ids
-    security_group_id = run.rede.db_security_group_id
-    kms_key_arn       = run.kms.kms_key_arn
+    postgres_major_version = "16"
+    subnet_ids             = run.rede.private_subnet_ids
+    security_group_id      = run.rede.db_security_group_id
+    kms_key_arn            = run.kms.kms_key_arn
   }
 
   assert {
