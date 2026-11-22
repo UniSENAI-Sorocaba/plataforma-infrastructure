@@ -11,3 +11,5 @@ override.tf.json
 modules/**/.terraform.lock.hcl
 tests/**/.terraform.lock.hcl
 crash.log
+
+.execucao.md
