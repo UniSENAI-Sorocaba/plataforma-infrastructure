@@ -51,6 +51,16 @@ run "cria_banco" {
     error_message = "Banco deve usar a chave KMS recebida."
   }
   assert {
+    condition = length([
+      for parameter in aws_db_parameter_group.this.parameter : parameter.value
+      if parameter.name == "rds.force_ssl"
+      ]) == 1 && alltrue([
+      for parameter in aws_db_parameter_group.this.parameter : parameter.value == "1"
+      if parameter.name == "rds.force_ssl"
+    ])
+    error_message = "Parameter group deve definir rds.force_ssl como 1 exatamente uma vez."
+  }
+  assert {
     condition     = output.master_secret_arn != null
     error_message = "Segredo do banco deve ser exposto apenas por ARN."
   }
