@@ -17,6 +17,10 @@ resource "aws_db_parameter_group" "this" {
   }
 }
 
+# WORKAROUND DO EMULADOR: MiniStack 1.5.20 devolve `master_user_secret` vazio
+# com senha gerenciada; development usa esta senha write-only e segredo local.
+# O root production omite o seletor e conserva o default `true`, portanto cria
+# apenas `managed` e nunca seleciona o recurso `local`.
 resource "aws_secretsmanager_secret" "master" {
   count                   = var.manage_master_user_password ? 0 : 1
   name                    = "plataforma/${var.environment}/database-master"
