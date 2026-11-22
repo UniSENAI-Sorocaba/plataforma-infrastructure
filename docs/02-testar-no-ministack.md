@@ -131,6 +131,7 @@ Verificado em 2026-10-22:
 | Rede (VPC, SG, rotas) | Só registros, sem rede real | Não dá para testar que o banco recusa conexão de fora; teste a **configuração** com assert |
 | DNS do ALB e do CloudFront | Nomes não resolvem | Não dá para fazer `curl` no ALB; teste a regra de rota pela API |
 | `manage_master_user_password` do RDS | `master_user_secret` volta vazio | development usa `password_wo` (ver card INF-005.1) |
+| Secrets Manager com `secret_string_wo` | Na auditoria de state após apply (12.5), `secret_string` existia como string vazia (0 caracteres), não ausente/nula; a busca do valor da senha e da forma JSON-escapada não encontrou correspondência | Diferencie vazio de ausente/nulo; verifique estrutura e valor separadamente e registre o desvio. O comportamento real da AWS ainda precisa ser confirmado |
 | Alarmes do CloudWatch | `datapoints_to_alarm` volta preenchido | Declare o atributo explicitamente para não ter drift |
 | Budgets, Cost Explorer, GuardDuty, Application Auto Scaling | Não emulados | INF-014, alarmes do GuardDuty e autoscaling (INF-017) ficam para a AWS real |
 | Custos | Zero | Estimativa com a AWS Pricing Calculator |
