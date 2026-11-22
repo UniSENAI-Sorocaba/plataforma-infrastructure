@@ -30,6 +30,22 @@ variables {
   manage_master_user_password = false
 }
 
+run "planeja_sem_secret_string" {
+  command = plan
+
+  variables {
+    postgres_major_version = "16"
+    subnet_ids             = run.rede.private_subnet_ids
+    security_group_id      = run.rede.db_security_group_id
+    kms_key_arn            = run.kms.kms_key_arn
+  }
+
+  assert {
+    condition     = aws_secretsmanager_secret_version.master[0].secret_string == null
+    error_message = "Plano do segredo não deve definir secret_string em texto puro."
+  }
+}
+
 run "cria_banco" {
   variables {
     postgres_major_version = "16"
@@ -82,6 +98,14 @@ run "cria_banco" {
       if contains(run.rede.public_subnet_ids, subnet_id)
     ]) == 0
     error_message = "DB subnet group não pode conter subnets públicas."
+  }
+  assert {
+    condition     = aws_db_instance.local[0].password == null
+    error_message = "Instância development não deve receber password em texto puro."
+  }
+  assert {
+    condition     = aws_db_instance.local[0].manage_master_user_password != true
+    error_message = "Senha da instância development não deve ser gerenciada pela AWS."
   }
   assert {
     condition     = output.master_secret_arn != null
