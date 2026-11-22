@@ -47,6 +47,10 @@ run "cria_banco" {
     error_message = "Armazenamento deve ser cifrado."
   }
   assert {
+    condition     = aws_db_instance.local[0].kms_key_id == run.kms.kms_key_arn
+    error_message = "Banco deve usar a chave KMS recebida."
+  }
+  assert {
     condition     = output.master_secret_arn != null
     error_message = "Segredo do banco deve ser exposto apenas por ARN."
   }
