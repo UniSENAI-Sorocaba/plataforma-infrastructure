@@ -51,6 +51,18 @@ run "cria_banco" {
     error_message = "Banco deve usar a chave KMS recebida."
   }
   assert {
+    condition     = aws_db_instance.local[0].engine == "postgres"
+    error_message = "Engine do banco deve ser PostgreSQL."
+  }
+  assert {
+    condition     = startswith(aws_db_instance.local[0].engine_version, "16")
+    error_message = "Versão do PostgreSQL deve ser major 16."
+  }
+  assert {
+    condition     = aws_db_parameter_group.this.family == "postgres16"
+    error_message = "Parameter group deve usar a família postgres16."
+  }
+  assert {
     condition = length([
       for parameter in aws_db_parameter_group.this.parameter : parameter.value
       if parameter.name == "rds.force_ssl"
