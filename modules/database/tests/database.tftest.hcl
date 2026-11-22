@@ -46,6 +46,54 @@ run "planeja_sem_secret_string" {
   }
 }
 
+run "planeja_caminho_production" {
+  command = plan
+
+  variables {
+    environment                 = "production"
+    postgres_major_version      = "16"
+    multi_az                    = true
+    deletion_protection         = true
+    manage_master_user_password = true
+    subnet_ids                  = run.rede.private_subnet_ids
+    security_group_id           = run.rede.db_security_group_id
+    kms_key_arn                 = run.kms.kms_key_arn
+  }
+
+  assert {
+    condition     = aws_db_instance.managed[0].manage_master_user_password == true
+    error_message = "Caminho production deve usar senha gerenciada pela AWS."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].publicly_accessible == false
+    error_message = "Banco production não pode ser público."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].storage_encrypted == true
+    error_message = "Armazenamento production deve ser cifrado."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].multi_az == true
+    error_message = "Instância production deve propagar Multi-AZ."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].deletion_protection == true
+    error_message = "Instância production deve propagar proteção contra exclusão."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].copy_tags_to_snapshot == true
+    error_message = "Instância production deve copiar tags para snapshots."
+  }
+  assert {
+    condition     = aws_db_instance.managed[0].auto_minor_version_upgrade == true
+    error_message = "Instância production deve habilitar upgrades minor."
+  }
+  assert {
+    condition     = length(aws_secretsmanager_secret.master) == 0 && length(aws_secretsmanager_secret_version.master) == 0
+    error_message = "Caminho production não deve planejar segredo local de development."
+  }
+}
+
 run "cria_banco" {
   variables {
     postgres_major_version = "16"
