@@ -43,7 +43,7 @@ run "cria_banco" {
     error_message = "Banco não pode ser público."
   }
   assert {
-    condition     = aws_db_instance.local[0].storage_encrypted
+    condition     = aws_db_instance.local[0].storage_encrypted == true
     error_message = "Armazenamento deve ser cifrado."
   }
   assert {
