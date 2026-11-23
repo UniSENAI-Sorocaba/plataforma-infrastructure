@@ -15,10 +15,15 @@ limitada ao arquivo `.tflock`; cada role de publicação pode enviar imagens som
 
 `gha-infra-apply` pode gerenciar os recursos Terraform da plataforma em `us-east-1`; ações IAM
 de criação/atribuição de boundary exigem `plataforma-workload-boundary`, e há `Deny` para as
-roles `/github-actions/`, o provedor OIDC e a própria boundary. A boundary limita roles de
-workload a acesso de runtime da plataforma. O output `workload_boundary_arn` deve ser passado
-como `workload_permissions_boundary_arn` ao root `environments/production`. `gha-release-deploy`
-não recebe policy de serviço até o escopo dos pipelines de deploy ser definido em INF-009/INF-019.
+roles `/github-actions/`, o provedor OIDC e a própria boundary. Cada role `gha-*` usa uma
+permissions boundary dedicada ao seu perfil; a de `gha-release-deploy` nega tudo até o escopo
+dos pipelines de deploy ser definido em INF-009/INF-019. A `plataforma-workload-boundary` limita
+roles de workload ao acesso de runtime da plataforma. O output `workload_boundary_arn` deve ser
+passado como `workload_permissions_boundary_arn` ao root `environments/production`.
+O bucket S3 configurado para o state é protegido contra exclusão e alterações de bucket policy
+pela role `gha-infra-apply`. Sua boundary usa um ceiling compacto por serviços/região; a policy
+inline continua limitando as permissões efetivas concedidas hoje. As boundaries de plan e
+publish acompanham as policies atuais; a boundary de release não concede permissões.
 
 `use_github_environments` é `false` por padrão. Quando `true`, as trusts de apply, publish e
 release exigem `environment:production` no `sub`; `infra-plan` continua restrita a

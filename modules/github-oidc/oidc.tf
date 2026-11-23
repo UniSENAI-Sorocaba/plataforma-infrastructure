@@ -89,4 +89,5 @@ resource "aws_iam_role" "this" {
   description          = each.value.purpose
   assume_role_policy   = data.aws_iam_policy_document.trust[each.key].json
   max_session_duration = 3600
+  permissions_boundary = aws_iam_policy.github_actions_boundary[each.key].arn
 }
