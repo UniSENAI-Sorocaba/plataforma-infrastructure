@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: plataforma-postgres
+    environment:
+      POSTGRES_DB: plataforma
+      POSTGRES_USER: plataforma
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - plataforma-database-data:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    container_name: plataforma-mailpit
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
+  backend:
+    build:
+      context: ../plataforma-backend
+      dockerfile: Dockerfile
+    container_name: plataforma-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/plataforma
+      SPRING_DATASOURCE_USERNAME: plataforma
+      SPRING_DATASOURCE_PASSWORD: local-development-only
+      SECURITY_JWT_ENABLED: "true"
+      SECURITY_JWT_ISSUER: http://localhost:8080
+      SECURITY_JWT_AUDIENCE: plataforma-api
+      SECURITY_JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?JWT_PRIVATE_KEY is required}
+      SECURITY_JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?JWT_PUBLIC_KEY is required}
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      SECURITY_PASSWORD_RECOVERY_DELIVERY: smtp
+      SECURITY_PASSWORD_RECOVERY_FROM: no-reply@plataforma.local
+      SECURITY_PASSWORD_RECOVERY_RESET_BASE_URL: http://localhost:3000/login
+      PLATFORM_STORAGE_ROOT: /tmp
+    ports:
+      - "127.0.0.1:18080:8080"
+
+  frontend:
+    build:
+      context: ../plataforma-frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://backend:8080
+    container_name: plataforma-frontend
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      BACKEND_URL: http://backend:8080
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    ports:
+      - "127.0.0.1:3100:3000"
+
+volumes:
+  plataforma-database-data:
