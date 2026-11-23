@@ -1,21 +1,31 @@
 variable "repository_names" {
-  description = "Nomes GitHub dos repositórios infra, backend, frontend e release."
+  description = "Nomes GitHub dos repositórios infra, backend e frontend."
   type = object({
     infra    = string
     backend  = string
     frontend = string
-    release  = string
   })
 }
 
 variable "repository_ids" {
-  description = "IDs numéricos dos repositórios GitHub infra, backend, frontend e release."
+  description = "IDs numéricos dos repositórios GitHub infra, backend e frontend."
   type = object({
     infra    = string
     backend  = string
     frontend = string
-    release  = string
   })
+}
+
+variable "release_repository_id" {
+  description = "ID numérico do repositório plataforma-release; null não cria a role de release."
+  type        = string
+  default     = null
+}
+
+variable "use_github_environments" {
+  description = "Usa o contexto environment:production nas trusts de apply, publish e release."
+  type        = bool
+  default     = false
 }
 
 variable "backend_ecr_repository_arn" {

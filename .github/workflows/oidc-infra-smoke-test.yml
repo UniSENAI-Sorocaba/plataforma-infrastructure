@@ -1,0 +1,20 @@
+name: Infrastructure OIDC smoke test
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-infrastructure-role:
+    if: ${{ vars.OIDC_SMOKE_TEST_ENABLED == 'true' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    uses: ./.github/workflows/oidc-smoke-test.yml
+    with:
+      role_arn: ${{ github.event_name == 'pull_request' && vars.GHA_INFRA_PLAN_ROLE_ARN || vars.GHA_INFRA_APPLY_ROLE_ARN }}
+      use_github_environment: ${{ github.event_name != 'pull_request' && vars.USE_GITHUB_ENVIRONMENTS == 'true' }}

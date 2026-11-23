@@ -7,3 +7,8 @@ output "role_arns" {
   description = "Mapa da função da role para seu ARN."
   value       = { for role_key, role in aws_iam_role.this : role_key => role.arn }
 }
+
+output "workload_boundary_arn" {
+  description = "ARN da permissions boundary usada em roles de workload."
+  value       = aws_iam_policy.workload_boundary.arn
+}

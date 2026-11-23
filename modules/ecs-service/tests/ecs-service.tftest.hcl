@@ -29,14 +29,15 @@ run "entrada" {
 }
 
 variables {
-  environment            = "development"
-  name                   = "backend"
-  image                  = "nginxinc/nginx-unprivileged:1.27-alpine"
-  require_image_digest   = false
-  container_port         = 8080
-  listener_rule_priority = 10
-  path_patterns          = ["/api/*"]
-  health_check_path      = "/"
+  environment              = "development"
+  name                     = "backend"
+  permissions_boundary_arn = "arn:aws:iam::000000000000:policy/plataforma-workload-boundary"
+  image                    = "nginxinc/nginx-unprivileged:1.27-alpine"
+  require_image_digest     = false
+  container_port           = 8080
+  listener_rule_priority   = 10
+  path_patterns            = ["/api/*"]
+  health_check_path        = "/"
 }
 
 run "cria_servico" {
@@ -63,6 +64,10 @@ run "cria_servico" {
   assert {
     condition     = output.target_group_arn != null && output.execution_role_arn != null
     error_message = "Contratos do serviço não foram expostos."
+  }
+  assert {
+    condition     = aws_iam_role.execution.permissions_boundary == var.permissions_boundary_arn && aws_iam_role.task.permissions_boundary == var.permissions_boundary_arn
+    error_message = "As roles ECS devem receber a permissions boundary da plataforma."
   }
 }
 

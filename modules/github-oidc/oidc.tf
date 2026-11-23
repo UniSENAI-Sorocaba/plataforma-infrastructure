@@ -4,7 +4,7 @@ resource "aws_iam_openid_connect_provider" "this" {
 }
 
 locals {
-  roles = {
+  required_roles = {
     infra-plan = {
       name       = "gha-infra-plan"
       repository = "infra"
@@ -14,32 +14,44 @@ locals {
     infra-apply = {
       name       = "gha-infra-apply"
       repository = "infra"
-      context    = "ref:refs/heads/main"
+      context    = var.use_github_environments ? "environment:production" : "ref:refs/heads/main"
       purpose    = "Apply infrastructure changes from the main branch."
     }
     backend-publish = {
       name       = "gha-backend-publish"
       repository = "backend"
-      context    = "ref:refs/heads/main"
+      context    = var.use_github_environments ? "environment:production" : "ref:refs/heads/main"
       purpose    = "Publish backend images to the backend ECR repository."
     }
     frontend-publish = {
       name       = "gha-frontend-publish"
       repository = "frontend"
-      context    = "ref:refs/heads/main"
+      context    = var.use_github_environments ? "environment:production" : "ref:refs/heads/main"
       purpose    = "Publish frontend images to the frontend ECR repository."
     }
+  }
+
+  release_role = var.release_repository_id == null ? {} : {
     release-deploy = {
       name       = "gha-release-deploy"
       repository = "release"
-      context    = "ref:refs/heads/main"
+      context    = var.use_github_environments ? "environment:production" : "ref:refs/heads/main"
       purpose    = "Deploy platform applications from the release repository."
     }
   }
 
+  roles = merge(local.required_roles, local.release_role)
+
+  repository_names = merge(var.repository_names, {
+    release = "plataforma-release"
+  })
+  repository_ids = merge(var.repository_ids, var.release_repository_id == null ? {} : {
+    release = var.release_repository_id
+  })
+
   trust_subjects = {
     for role_key, role in local.roles :
-    role_key => "repo:UniSENAI-Sorocaba@321832374/${var.repository_names[role.repository]}@${var.repository_ids[role.repository]}:${role.context}"
+    role_key => "repo:UniSENAI-Sorocaba@321832374/${local.repository_names[role.repository]}@${local.repository_ids[role.repository]}:${role.context}"
   }
 }
 
