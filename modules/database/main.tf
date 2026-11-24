@@ -1,25 +1,52 @@
 resource "aws_db_subnet_group" "this" {
-  name       = "plataforma-${var.environment}"
-  subnet_ids = var.subnet_ids
-  tags       = { Name = "plataforma-${var.environment}" }
+  name        = "plataforma-db-${var.environment}"
+  description = "Private database subnet group for ${var.environment}"
+  subnet_ids  = var.subnet_ids
+  tags        = { Name = "plataforma-db-${var.environment}" }
 }
 
 resource "aws_db_parameter_group" "this" {
-  name   = "plataforma-${var.environment}-postgres16"
-  family = "postgres16"
+  name        = "plataforma-db-postgres16-${var.environment}"
+  description = "PostgreSQL 16 parameter group for ${var.environment}"
+  family      = "postgres16"
 
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "immediate"
   }
 }
 
+# WORKAROUND DO EMULADOR: MiniStack 1.5.20 devolve `master_user_secret` vazio
+# com senha gerenciada; development usa esta senha write-only e segredo local.
+# O root production omite o seletor e conserva o default `true`, portanto cria
+# apenas `managed` e nunca seleciona o recurso `local`.
 resource "aws_secretsmanager_secret" "master" {
   count                   = var.manage_master_user_password ? 0 : 1
   name                    = "plataforma/${var.environment}/database-master"
   description             = "Credencial do banco da Plataforma Digital"
-  kms_key_id              = var.kms_key_arn
   recovery_window_in_days = var.environment == "development" ? 0 : 30
+}
+
+resource "aws_secretsmanager_secret_version" "master" {
+  count     = var.manage_master_user_password ? 0 : 1
+  secret_id = aws_secretsmanager_secret.master[0].id
+  secret_string_wo = jsonencode({
+    username = "plataforma_admin"
+    password = ephemeral.random_password.this[0].result
+  })
+  secret_string_wo_version = 1
+}
+
+ephemeral "random_password" "this" {
+  count            = var.manage_master_user_password ? 0 : 1
+  length           = 32
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
+  min_upper        = 1
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
 resource "aws_db_instance" "managed" {
@@ -65,7 +92,7 @@ resource "aws_db_instance" "local" {
   kms_key_id                 = var.kms_key_arn
   db_name                    = "plataforma"
   username                   = "plataforma_admin"
-  password_wo                = "local-development-only"
+  password_wo                = ephemeral.random_password.this[0].result
   password_wo_version        = 1
   port                       = 5432
   db_subnet_group_name       = aws_db_subnet_group.this.name
