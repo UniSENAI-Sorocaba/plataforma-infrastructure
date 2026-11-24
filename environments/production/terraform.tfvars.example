@@ -1,0 +1,8 @@
+# Copie apenas no ambiente do CI. Não versione terraform.tfvars real.
+backend_image                 = "123456789012.dkr.ecr.us-east-1.amazonaws.com/plataforma-backend@sha256:REPLACE"
+frontend_image                = "123456789012.dkr.ecr.us-east-1.amazonaws.com/plataforma-frontend@sha256:REPLACE"
+database_password             = "FORNECER_PELO_SECRET_DO_CI"
+certificate_arn               = "arn:aws:acm:us-east-1:123456789012:certificate/REPLACE"
+cloudfront_certificate_arn    = null
+public_domain                 = "dxxxxxxx.cloudfront.net"
+cloudfront_aliases            = []

@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf install -y docker awscli2 python3 cronie
+systemctl enable --now docker
+systemctl enable --now crond
+
+device="/dev/sdf"
+for attempt in $(seq 1 30); do
+  [ -b "$device" ] && break
+  sleep 2
+done
+
+if ! blkid "$device" >/dev/null 2>&1; then
+  mkfs.ext4 "$device"
+fi
+mkdir -p /var/lib/postgresql
+mount "$device" /var/lib/postgresql || true
+grep -q "$device /var/lib/postgresql" /etc/fstab || echo "$device /var/lib/postgresql ext4 defaults,nofail 0 2" >> /etc/fstab
+
+secret=$(aws secretsmanager get-secret-value --secret-id '${secret_arn}' --query SecretString --output text)
+password=$(printf '%s' "$secret" | python3 -c 'import json,sys; print(json.load(sys.stdin)["password"])')
+mkdir -p /etc/plataforma
+printf '%s' "$password" > /etc/plataforma/postgres-password
+chmod 600 /etc/plataforma/postgres-password
+
+docker pull postgres:16-alpine
+docker rm -f plataforma-postgres 2>/dev/null || true
+docker run -d --name plataforma-postgres --restart unless-stopped \
+  -p 5432:5432 \
+  -e POSTGRES_DB=plataforma \
+  -e POSTGRES_USER=plataforma_admin \
+  -e POSTGRES_PASSWORD="$password" \
+  -v /var/lib/postgresql:/var/lib/postgresql/data \
+  postgres:16-alpine
+
+mkdir -p /usr/local/sbin
+cat >/usr/local/sbin/plataforma-postgres-backup <<'BACKUP'
+#!/bin/bash
+set -euo pipefail
+stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+file="/tmp/plataforma-$stamp.sql.gz"
+docker exec plataforma-postgres pg_dump -U plataforma_admin -d plataforma | gzip > "$file"
+aws s3 cp "$file" "s3://${backup_bucket}/postgres/$stamp.sql.gz" --sse aws:kms
+rm -f "$file"
+BACKUP
+chmod 700 /usr/local/sbin/plataforma-postgres-backup
+echo '0 3 * * * root /usr/local/sbin/plataforma-postgres-backup' >/etc/cron.d/plataforma-postgres-backup
