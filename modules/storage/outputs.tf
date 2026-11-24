@@ -2,7 +2,7 @@
 
 output "bucket_name" {
   description = "Nome do bucket de uploads (plataforma-uploads-<ambiente>)."
-  value       = aws_s3_bucket.this.id
+  value       = aws_s3_bucket.this.bucket
 }
 
 output "bucket_arn" {
