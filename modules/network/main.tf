@@ -1,6 +1,9 @@
 data "aws_availability_zones" "available" { state = "available" }
 
-locals { azs = slice(data.aws_availability_zones.available.names, 0, var.az_count) }
+locals {
+  azs       = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  nat_count = var.enable_nat ? (var.nat_gateway_count == 0 ? var.az_count : var.nat_gateway_count) : 0
+}
 
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -53,13 +56,13 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_eip" "nat" {
-  count  = var.enable_nat ? var.az_count : 0
+  count  = local.nat_count
   domain = "vpc"
   tags   = { Name = "plataforma-${var.environment}-nat-${count.index}" }
 }
 
 resource "aws_nat_gateway" "this" {
-  count         = var.enable_nat ? var.az_count : 0
+  count         = local.nat_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   depends_on    = [aws_internet_gateway.this]
@@ -71,7 +74,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.this[count.index].id
+    nat_gateway_id = aws_nat_gateway.this[min(count.index, local.nat_count - 1)].id
   }
   tags = { Name = "plataforma-${var.environment}-private-${count.index}" }
 }

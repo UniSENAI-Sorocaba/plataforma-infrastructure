@@ -11,3 +11,6 @@ locals {
     Squad       = "cloud-devops"
   }
 }
+
+# Todos os valores abaixo devem ser fornecidos pelo CI/OIDC. Não versionar um
+# terraform.tfvars com imagens, certificados ou senha do banco.

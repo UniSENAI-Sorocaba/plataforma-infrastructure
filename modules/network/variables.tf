@@ -35,6 +35,17 @@ variable "enable_nat" {
   default     = false
 }
 
+variable "nat_gateway_count" {
+  description = "Quantidade de NAT Gateways. Zero usa um por AZ quando enable_nat=true; use 1 na variante acadêmica de menor custo."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.nat_gateway_count >= 0 && var.nat_gateway_count <= var.az_count
+    error_message = "nat_gateway_count deve estar entre 0 e az_count."
+  }
+}
+
 variable "enable_flow_logs" {
   description = "Liga VPC Flow Logs de tráfego REJECT. true em production."
   type        = bool

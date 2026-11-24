@@ -13,6 +13,11 @@ make test MOD=network        # testa um módulo no MiniStack
 make help                    # todos os comandos
 ```
 
+Para a arquitetura AWS acadêmica de baixo custo, consulte
+[`docs/06-arquitetura-academica-low-cost.md`](docs/06-arquitetura-academica-low-cost.md).
+Ela documenta CloudFront, ALB, ECS frontend/backend e PostgreSQL 16 em EC2 com
+EBS criptografado, backup para S3, pré-requisitos e fluxo de deploy.
+
 Primeira vez? Leia nesta ordem:
 
 1. [Como contribuir](docs/01-como-contribuir.md): do card ao merge.
@@ -30,11 +35,13 @@ Primeira vez? Leia nesta ordem:
 │   ├── network/             #   INF-002.1  VPC, subnets, SGs
 │   ├── secrets/             #   INF-008.1  KMS e Secrets Manager
 │   ├── database/            #   INF-005.1  RDS PostgreSQL 16
+│   ├── postgres-ec2/        #   variante acadêmica: PostgreSQL 16 em EC2 + EBS + S3
 │   ├── registry/            #   INF-006.1  ECR
 │   ├── storage/             #   INF-010.1  S3 de uploads
 │   ├── ecs-cluster/         #   INF-007.1  cluster ECS
 │   ├── load-balancer/       #   INF-007.2  ALB (porta de entrada)
-│   └── ecs-service/         #   INF-007.3  serviço Fargate (backend, frontend)
+│   ├── ecs-service/         #   INF-007.3  serviço Fargate (backend, frontend)
+│   └── cloudfront/          #   INF-011  distribuição pública e roteamento para o ALB
 ├── environments/
 │   ├── development/         # só MiniStack, state local
 │   └── production/          # única conta AWS, só pelo CI com OIDC
