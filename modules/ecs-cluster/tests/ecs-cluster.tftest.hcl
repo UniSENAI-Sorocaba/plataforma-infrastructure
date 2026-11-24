@@ -23,4 +23,29 @@ run "cria_cluster" {
     condition     = output.cluster_arn != null
     error_message = "ARN do cluster não foi exposto."
   }
+  assert {
+    condition = contains([
+      for s in aws_ecs_cluster.this.setting : "${s.name}:${s.value}"
+    ], "containerInsights:enabled")
+    error_message = "Container Insights deveria estar enabled por padrão."
+  }
+  assert {
+    condition     = contains(aws_ecs_cluster_capacity_providers.this.capacity_providers, "FARGATE")
+    error_message = "Capacity provider FARGATE deve estar associado ao cluster."
+  }
+}
+
+run "container_insights_desabilitado" {
+  command = plan
+
+  variables {
+    container_insights = false
+  }
+
+  assert {
+    condition = contains([
+      for s in aws_ecs_cluster.this.setting : "${s.name}:${s.value}"
+    ], "containerInsights:disabled")
+    error_message = "Container Insights deveria estar disabled quando container_insights = false."
+  }
 }
