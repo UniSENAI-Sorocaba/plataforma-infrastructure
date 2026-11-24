@@ -1,24 +1,32 @@
+# Módulo registry (ECR) | Card: INF-006.1 (pai: INF-006)
+#
+# Cria um repositório ECR por item de var.repositories com:
+#   - image_tag_mutability = "IMMUTABLE" e scan_on_push = true;
+#   - cifragem KMS (quando var.kms_key_arn é informada) ou AES256;
+#   - lifecycle policy expirando imagens sem tag em 7 dias e mantendo as últimas
+#     var.keep_last_images imagens com tag.
+
 resource "aws_ecr_repository" "this" {
-  for_each             = var.repositories
+  for_each = var.repositories
+
   name                 = "plataforma-${each.value}-${var.environment}"
   image_tag_mutability = "IMMUTABLE"
+  force_delete         = var.environment == "development"
 
   image_scanning_configuration {
     scan_on_push = true
   }
 
-  dynamic "encryption_configuration" {
-    for_each = var.kms_key_arn == null ? [] : [var.kms_key_arn]
-    content {
-      encryption_type = "KMS"
-      kms_key         = encryption_configuration.value
-    }
+  encryption_configuration {
+    encryption_type = var.kms_key_arn != null ? "KMS" : "AES256"
+    kms_key         = var.kms_key_arn
   }
 }
 
 resource "aws_ecr_lifecycle_policy" "this" {
-  for_each   = var.repositories
-  repository = aws_ecr_repository.this[each.value].name
+  for_each = aws_ecr_repository.this
+
+  repository = each.value.name
   policy = jsonencode({
     rules = [
       {
@@ -30,18 +38,22 @@ resource "aws_ecr_lifecycle_policy" "this" {
           countUnit   = "days"
           countNumber = 7
         }
-        action = { type = "expire" }
+        action = {
+          type = "expire"
+        }
       },
       {
         rulePriority = 2
-        description  = "Mantém as últimas imagens tagueadas"
+        description  = "Mantém as últimas ${var.keep_last_images} imagens com tag"
         selection = {
-          tagStatus     = "tagged"
-          tagPrefixList = ["v", "release-"]
-          countType     = "imageCountMoreThan"
-          countNumber   = var.keep_last_images
+          tagStatus      = "tagged"
+          tagPatternList = ["*"]
+          countType      = "imageCountMoreThan"
+          countNumber    = var.keep_last_images
         }
-        action = { type = "expire" }
+        action = {
+          type = "expire"
+        }
       }
     ]
   })
