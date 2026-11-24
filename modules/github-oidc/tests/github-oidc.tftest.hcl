@@ -23,7 +23,7 @@ variables {
   use_github_environments     = false
   backend_ecr_repository_arn  = "arn:aws:ecr:us-east-1:000000000000:repository/plataforma-backend"
   frontend_ecr_repository_arn = "arn:aws:ecr:us-east-1:000000000000:repository/plataforma-frontend"
-  state_bucket_name           = "fixture-terraform-state"
+  state_bucket_name           = "plataforma-terraform-state"
   state_key                   = "plataforma/production/terraform.tfstate"
 }
 
@@ -46,6 +46,73 @@ run "creates_oidc_provider_and_five_roles" {
   assert {
     condition     = alltrue([for role in aws_iam_role.this : role.path == "/github-actions/"])
     error_message = "Todas as roles devem usar o path /github-actions/."
+  }
+
+  assert {
+    condition = alltrue([
+      for role_key, role in aws_iam_role.this :
+      role.permissions_boundary == aws_iam_policy.github_actions_boundary[role_key].arn
+    ])
+    error_message = "Todas as roles GitHub Actions devem usar sua permissions boundary dedicada."
+  }
+
+  assert {
+    condition = alltrue([
+      length(regexall("\\S", data.aws_iam_policy_document.infra_apply_boundary.json)) <= 6144,
+      anytrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["infra-apply"].policy).Statement :
+        statement.Sid == "ManagePlatformServices" &&
+        contains(flatten([statement.Action]), "ecs:*") &&
+        statement.Condition.StringEquals["aws:RequestedRegion"] == "us-east-1"
+      ]),
+      anytrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["backend-publish"].policy).Statement :
+        statement.Sid == "PublishOnlyOwnImage" &&
+        statement.Resource == "arn:aws:ecr:us-east-1:000000000000:repository/plataforma-backend"
+      ]),
+      anytrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["frontend-publish"].policy).Statement :
+        statement.Sid == "PublishOnlyOwnImage" &&
+        statement.Resource == "arn:aws:ecr:us-east-1:000000000000:repository/plataforma-frontend"
+      ]),
+      alltrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["infra-plan"].policy).Statement :
+        !contains(flatten([statement.Action]), "secretsmanager:GetSecretValue")
+      ]),
+      anytrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["release-deploy"].policy).Statement :
+        statement.Sid == "DenyRolePassingUntilDeployPermissionsAreDefined" &&
+        statement.Effect == "Deny"
+      ]) &&
+      alltrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["release-deploy"].policy).Statement :
+        statement.Effect != "Allow"
+      ])
+    ])
+    error_message = "Cada permissions boundary deve respeitar o escopo atual da role correspondente."
+  }
+
+  assert {
+    condition = alltrue([
+      anytrue([
+        for statement in jsondecode(data.aws_iam_policy_document.infra_apply_services.json).Statement :
+        statement.Sid == "ProtectTerraformStateBucket" &&
+        statement.Effect == "Deny" &&
+        statement.Resource == "arn:aws:s3:::plataforma-terraform-state" &&
+        alltrue([
+          for action in flatten([statement.Action]) :
+          contains(["s3:DeleteBucket", "s3:DeleteBucketPolicy", "s3:PutBucketPolicy"], action)
+        ]) &&
+        length(flatten([statement.Action])) == 3
+      ]),
+      anytrue([
+        for statement in jsondecode(aws_iam_policy.github_actions_boundary["infra-apply"].policy).Statement :
+        statement.Sid == "ProtectTerraformStateBucket" &&
+        statement.Effect == "Deny" &&
+        statement.Resource == "arn:aws:s3:::plataforma-terraform-state"
+      ])
+    ])
+    error_message = "A role infra-apply deve negar alterações destrutivas à policy do bucket de state."
   }
 
   assert {
@@ -140,7 +207,7 @@ run "creates_oidc_provider_and_five_roles" {
       ]) && anytrue([
       for statement in jsondecode(aws_iam_role_policy.infra_plan_state.policy).Statement :
       statement.Sid == "ManageTerraformPlanLock" &&
-      statement.Resource == "arn:aws:s3:::fixture-terraform-state/plataforma/production/terraform.tfstate.tflock" &&
+      statement.Resource == "arn:aws:s3:::plataforma-terraform-state/plataforma/production/terraform.tfstate.tflock" &&
       alltrue([
         for action in flatten([statement.Action]) :
         contains(["s3:DeleteObject", "s3:GetObject", "s3:PutObject"], action)
@@ -151,14 +218,17 @@ run "creates_oidc_provider_and_five_roles" {
 
   assert {
     condition = alltrue([
-      for role_policy in [
-        aws_iam_role_policy.infra_plan_read.policy,
-        aws_iam_role_policy.infra_plan_state.policy,
-        aws_iam_role_policy.publish["backend"].policy,
-        aws_iam_role_policy.publish["frontend"].policy,
-        data.aws_iam_policy_document.infra_apply_services.json,
-        data.aws_iam_policy_document.workload_boundary.json
-      ] :
+      for role_policy in concat(
+        [
+          aws_iam_role_policy.infra_plan_read.policy,
+          aws_iam_role_policy.infra_plan_state.policy,
+          aws_iam_role_policy.publish["backend"].policy,
+          aws_iam_role_policy.publish["frontend"].policy,
+          data.aws_iam_policy_document.infra_apply_services.json,
+          data.aws_iam_policy_document.workload_boundary.json
+        ],
+        [for boundary in values(aws_iam_policy.github_actions_boundary) : boundary.policy]
+      ) :
       alltrue([for statement in jsondecode(role_policy).Statement : !contains(flatten([statement.Action]), "*:*")])
     ])
     error_message = "Nenhuma policy deve conceder a ação global *:*."
@@ -201,7 +271,7 @@ run "release_role_is_optional" {
   }
 
   assert {
-    condition     = length(aws_iam_role.this) == 4 && !contains(keys(aws_iam_role.this), "release-deploy")
+    condition     = length(aws_iam_role.this) == 4 && length(aws_iam_policy.github_actions_boundary) == 4 && !contains(keys(aws_iam_role.this), "release-deploy") && !contains(keys(aws_iam_policy.github_actions_boundary), "release-deploy")
     error_message = "A role gha-release-deploy só deve existir quando release_repository_id for informado."
   }
 }

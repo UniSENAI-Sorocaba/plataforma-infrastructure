@@ -268,7 +268,7 @@ Docker Desktop não instalável sem privilégio/reinício; WSL2/virtualização 
 | `gha-frontend-publish` | frontend | `ref:refs/heads/main` | Push **só** no ECR do frontend |
 | `gha-release-deploy` | `plataforma-release` | `ref:refs/heads/main` | Mínimo do lab (D9); **só existe se** `release_repository_id` ≠ null |
 
-Com `use_github_environments = true` o contexto do `sub` muda (D10: confirmar no `07`). Todas: `permissions_boundary` = `plataforma-workload-boundary`; nenhuma `AdministratorAccess`; nenhum `*:*`; path `/github-actions/` **[VERIFICAR contra o contrato]**.
+Com `use_github_environments = true` o contexto do `sub` muda (D10: confirmar no `07`). Todas as roles `gha-*` têm uma permissions boundary dedicada ao seu perfil; nenhuma `AdministratorAccess`; nenhum `*:*`; path `/github-actions/` **[VERIFICAR contra o contrato]**. `plataforma-workload-boundary` permanece exclusiva para workloads.
 
 ---
 
@@ -458,7 +458,7 @@ Legenda: **[sem commit]** = diagnóstico/ambiente; **[commit]** = exatamente um 
 #### A14 — Roles com trust policy [commit]
 **Objetivo (RF2, RF4, RF7):** 4 roles obrigatórias via `for_each`.
 **Execução:**
-1. `aws_iam_role` para `gha-infra-plan`, `gha-infra-apply`, `gha-backend-publish`, `gha-frontend-publish`, com `permissions_boundary` e `path` conforme o contrato.
+1. `aws_iam_role` para `gha-infra-plan`, `gha-infra-apply`, `gha-backend-publish`, `gha-frontend-publish`, com permissions boundary dedicada ao perfil de cada role e `path` conforme o contrato.
 2. Trust: `Action = sts:AssumeRoleWithWebIdentity`, `Principal.Federated` = provedor, `Condition.StringEquals` com **`aud` e `sub` exatos** (nunca `StringLike`).
 3. Preferir `aws_iam_policy_document`.
 **Arquivos:** `modules/github-oidc/roles.tf`.
@@ -543,7 +543,7 @@ Legenda: **[sem commit]** = diagnóstico/ambiente; **[commit]** = exatamente um 
 **Commit:** `test(github-oidc): verifica provedor, roles e trust com aud/sub exatos`
 
 #### A23 — Teste: boundary e ausência de admin/`*:*` (CA3, P1, P3) [commit]
-**Execução:** asserts: todas as roles têm `permissions_boundary` igual ao boundary; nenhum anexo de `AdministratorAccess`; nenhuma policy com `Action "*"`+`Resource "*"`; policy de plan sem `secretsmanager:GetSecretValue`; policy de apply contém a condição `iam:PermissionsBoundary` e o `Deny` (CA/P3 parte estática); nenhum `aws_iam_user`/`aws_iam_access_key` no módulo (P1).
+**Execução:** asserts: todas as roles têm `permissions_boundary` igual à boundary dedicada do seu perfil; nenhuma boundary concede acesso a `release-deploy` antes de o escopo ser definido; nenhum anexo de `AdministratorAccess`; nenhuma policy com `Action "*"`+`Resource "*"`; policy de plan sem `secretsmanager:GetSecretValue`; policy de apply contém a condição `iam:PermissionsBoundary` e os `Deny` (CA/P3 parte estática); nenhum `aws_iam_user`/`aws_iam_access_key` no módulo (P1).
 **Se** o MiniStack não devolver `permissions_boundary` no state: asserte sobre o valor **configurado** e registre `WORKAROUND DO EMULADOR` + limitação (A36).
 **Arquivos:** mesmo `.tftest.hcl` (novo `run`) ou arquivo irmão.
 **Commit:** `test(github-oidc): garante boundary, ausência de admin e de *:* nas policies`

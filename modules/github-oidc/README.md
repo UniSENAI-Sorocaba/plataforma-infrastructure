@@ -17,8 +17,14 @@ As roles de publicação só recebem permissões de push no respectivo repositó
 atribuir boundary a roles `plataforma-*` usando `plataforma-workload-boundary`. A policy também
 protege roles `/github-actions/`, o provedor OIDC e a própria boundary.
 
-A boundary limita permissões de runtime de workloads da plataforma. `release-deploy` não recebe
-policy de serviço até o escopo dos workflows de deploy ser definido em INF-009/INF-019.
+Cada role `gha-*` usa uma permissions boundary dedicada ao seu perfil. As boundaries de plan e
+publish espelham as policies atuais; a de `release-deploy` não concede permissões até o escopo
+dos workflows de deploy ser definido em INF-009/INF-019. A boundary de `infra-apply` usa um
+ceiling compacto por serviços/região para respeitar o limite de tamanho das policies gerenciadas;
+sua policy inline continua sendo a allowlist efetiva atual. O bucket configurado para o state
+não pode ser excluído nem ter sua bucket policy alterada pela role `infra-apply`.
+A `plataforma-workload-boundary` continua limitando permissões de runtime das roles de workload
+e é exigida ao criar ou alterar roles `plataforma-*`.
 
 ## Uso
 

@@ -150,6 +150,17 @@ data "aws_iam_policy_document" "infra_apply_services" {
   }
 
   statement {
+    sid    = "ProtectTerraformStateBucket"
+    effect = "Deny"
+    actions = [
+      "s3:DeleteBucket",
+      "s3:DeleteBucketPolicy",
+      "s3:PutBucketPolicy"
+    ]
+    resources = ["arn:aws:s3:::${var.state_bucket_name}"]
+  }
+
+  statement {
     sid       = "CreatePlatformKmsKeys"
     effect    = "Allow"
     actions   = ["kms:CreateKey"]
