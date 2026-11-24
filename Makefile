@@ -8,10 +8,11 @@ TF_OFFLINE ?= $(shell command -v terraform >/dev/null 2>&1 && echo terraform || 
 LOCAL := env AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1 AWS_ENDPOINT_URL=http://localhost:4566
 
 DEV     := environments/development
+GLOBAL_OIDC := global/github-oidc
 ROOTS   := environments/development environments/production
 MODULES := $(sort $(wildcard modules/*))
 
-.PHONY: help up down reset status fmt check validate test test-all init plan apply destroy aws
+.PHONY: help up down reset status fmt check validate test test-all init plan apply destroy aws global-oidc-init global-oidc-plan global-oidc-apply global-oidc-destroy
 
 help:          ## Lista os comandos
 	@grep -E '^[a-z-]+:.*## ' Makefile | sed 's/:.*## /\t/'
@@ -68,3 +69,15 @@ destroy:       ## Destrói o ambiente development
 
 aws:           ## AWS CLI no MiniStack. Ex.: make aws CMD="ecs list-clusters"
 	docker compose run --rm -T aws $(CMD)
+
+global-oidc-init: ## Inicializa o root de OIDC da conta no MiniStack
+	$(LOCAL) $(TF) -chdir=$(GLOBAL_OIDC) init -input=false
+
+global-oidc-plan: ## Gera plan do root global/github-oidc no MiniStack
+	$(LOCAL) $(TF) -chdir=$(GLOBAL_OIDC) plan -out=github-oidc.tfplan
+
+global-oidc-apply: ## Aplica o plan global/github-oidc no MiniStack
+	$(LOCAL) $(TF) -chdir=$(GLOBAL_OIDC) apply -auto-approve github-oidc.tfplan
+
+global-oidc-destroy: ## Destrói recursos do root global/github-oidc no MiniStack
+	$(LOCAL) $(TF) -chdir=$(GLOBAL_OIDC) destroy -auto-approve

@@ -103,9 +103,10 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
 }
 
 resource "aws_iam_role" "flow_logs" {
-  count              = var.enable_flow_logs ? 1 : 0
-  name               = "plataforma-${var.environment}-vpc-flow-logs"
-  assume_role_policy = data.aws_iam_policy_document.flow_logs_assume[0].json
+  count                = var.enable_flow_logs ? 1 : 0
+  name                 = "plataforma-${var.environment}-vpc-flow-logs"
+  assume_role_policy   = data.aws_iam_policy_document.flow_logs_assume[0].json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 resource "aws_iam_role_policy" "flow_logs" {

@@ -8,6 +8,17 @@ variable "environment" {
   }
 }
 
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary anexada às roles criadas pelo módulo. null somente em development/MiniStack."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.permissions_boundary_arn == null || can(regex("^arn:aws:iam::[0-9]{12}:policy/plataforma-workload-boundary$", var.permissions_boundary_arn))
+    error_message = "permissions_boundary_arn deve apontar para a policy plataforma-workload-boundary."
+  }
+}
+
 variable "vpc_cidr" {
   description = "CIDR exclusivo do ambiente: 10.10.0.0/16 (development) ou 10.30.0.0/16 (production)."
   type        = string

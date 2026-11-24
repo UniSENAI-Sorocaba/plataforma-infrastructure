@@ -17,8 +17,9 @@ resource "aws_cloudwatch_log_group" "this" {
 }
 
 resource "aws_iam_role" "execution" {
-  name               = "plataforma-${var.name}-${var.environment}-execution"
-  assume_role_policy = data.aws_iam_policy_document.tasks_assume.json
+  name                 = "plataforma-${var.name}-${var.environment}-execution"
+  assume_role_policy   = data.aws_iam_policy_document.tasks_assume.json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 resource "aws_iam_role_policy_attachment" "execution" {
@@ -47,8 +48,9 @@ resource "aws_iam_role_policy" "secrets" {
 }
 
 resource "aws_iam_role" "task" {
-  name               = "plataforma-${var.name}-${var.environment}-task"
-  assume_role_policy = data.aws_iam_policy_document.tasks_assume.json
+  name                 = "plataforma-${var.name}-${var.environment}-task"
+  assume_role_policy   = data.aws_iam_policy_document.tasks_assume.json
+  permissions_boundary = var.permissions_boundary_arn
 }
 
 locals {

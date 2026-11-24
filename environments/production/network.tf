@@ -6,6 +6,7 @@ module "network" {
   source = "../../modules/network"
 
   environment                 = local.environment
+  permissions_boundary_arn    = var.workload_permissions_boundary_arn
   vpc_cidr                    = "10.30.0.0/16"
   enable_nat                  = true
   nat_gateway_count           = 1

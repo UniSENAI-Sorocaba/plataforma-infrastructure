@@ -6,19 +6,20 @@ variable "backend_image" {
 module "backend" {
   source = "../../modules/ecs-service"
 
-  environment            = local.environment
-  name                   = "backend"
-  image                  = var.backend_image
-  container_port         = 8080
-  cluster_arn            = module.ecs_cluster.cluster_arn
-  vpc_id                 = module.network.vpc_id
-  subnet_ids             = module.network.private_subnet_ids
-  security_group_id      = module.network.app_security_group_id
-  listener_arn           = module.load_balancer.listener_arn
-  listener_rule_priority = 10
-  path_patterns          = ["/api/*"]
-  health_check_path      = "/actuator/health"
-  kms_key_arn            = module.secrets.kms_key_arn
+  environment              = local.environment
+  permissions_boundary_arn = var.workload_permissions_boundary_arn
+  name                     = "backend"
+  image                    = var.backend_image
+  container_port           = 8080
+  cluster_arn              = module.ecs_cluster.cluster_arn
+  vpc_id                   = module.network.vpc_id
+  subnet_ids               = module.network.private_subnet_ids
+  security_group_id        = module.network.app_security_group_id
+  listener_arn             = module.load_balancer.listener_arn
+  listener_rule_priority   = 10
+  path_patterns            = ["/api/*"]
+  health_check_path        = "/actuator/health"
+  kms_key_arn              = module.secrets.kms_key_arn
 
   environment_variables = {
     SPRING_DATASOURCE_URL                     = "jdbc:postgresql://${module.database.endpoint}:${module.database.port}/plataforma"

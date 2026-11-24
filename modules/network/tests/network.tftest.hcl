@@ -39,3 +39,17 @@ run "producao_recusa_alb_aberto" {
 
   expect_failures = [var.alb_ingress_cidrs]
 }
+
+run "flow_logs_role_uses_workload_boundary" {
+  command = plan
+
+  variables {
+    enable_flow_logs         = true
+    permissions_boundary_arn = "arn:aws:iam::000000000000:policy/plataforma-workload-boundary"
+  }
+
+  assert {
+    condition     = aws_iam_role.flow_logs[0].permissions_boundary == var.permissions_boundary_arn
+    error_message = "A role de VPC Flow Logs deve receber a permissions boundary da plataforma."
+  }
+}

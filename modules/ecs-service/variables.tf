@@ -8,6 +8,17 @@ variable "environment" {
   }
 }
 
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary anexada às roles ECS. null somente em development/MiniStack."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.permissions_boundary_arn == null || can(regex("^arn:aws:iam::[0-9]{12}:policy/plataforma-workload-boundary$", var.permissions_boundary_arn))
+    error_message = "permissions_boundary_arn deve apontar para a policy plataforma-workload-boundary."
+  }
+}
+
 variable "name" {
   description = "Nome curto do serviço: backend ou frontend. Nome final: plataforma-<name>-<ambiente>."
   type        = string

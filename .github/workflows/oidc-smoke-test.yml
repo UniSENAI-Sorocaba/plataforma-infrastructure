@@ -1,0 +1,46 @@
+name: OIDC smoke test
+
+on:
+  workflow_call:
+    inputs:
+      role_arn:
+        description: ARN of the role to assume.
+        required: true
+        type: string
+      use_github_environment:
+        description: Use the production GitHub Environment subject.
+        default: false
+        required: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-branch-subject:
+    if: ${{ !inputs.use_github_environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_arn }}
+          role-session-name: oidc-smoke-${{ github.run_id }}
+          aws-region: us-east-1
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
+
+  verify-environment-subject:
+    if: ${{ inputs.use_github_environment }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_arn }}
+          role-session-name: oidc-smoke-${{ github.run_id }}
+          aws-region: us-east-1
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
