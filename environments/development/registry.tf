@@ -1,3 +1,5 @@
+# INF-006.1: registry de imagens (ECR).
+
 module "registry" {
   source = "../../modules/registry"
 
